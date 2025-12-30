@@ -6,6 +6,7 @@ from parser.cloudtrail_parser import CloudTrailParser
 from ai_analyzer import AIAnalyzer
 from mitre_mapper import MitreMapper
 from report_generator import ReportGenerator
+import uvicorn
 
 def main():
     
@@ -29,5 +30,7 @@ def main():
     report = ReportGenerator().generate(findings)
     print(report)
 
+import uvicorn
+
 if __name__ == "__main__":
-    main()
+    uvicorn.run("src.api:app", host="0.0.0.0", port=80)

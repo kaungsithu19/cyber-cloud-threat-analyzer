@@ -19,4 +19,5 @@ COPY src/ ./src
 COPY sample_logs/ ./sample_logs/
 COPY tests/ ./tests
 
-CMD ["python", "src/main.py"]
+CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "80"]
+    

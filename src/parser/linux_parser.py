@@ -28,3 +28,9 @@ class LinuxAuthParser(BaseParser):
                 })
 
         return logs
+    
+def parse_from_string(self, content: str):
+    temp_path = "temp_linux.log"
+    with open(temp_path, "w") as f:
+        f.write(content)
+    return self.parse(temp_path)

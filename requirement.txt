@@ -1,3 +1,6 @@
 rich
 pandas
 pytest
+fastapi
+uvicorn
+python-multipart

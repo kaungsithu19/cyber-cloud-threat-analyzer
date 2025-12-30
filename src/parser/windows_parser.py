@@ -14,3 +14,10 @@ class WindowsEventParser(BaseParser):
                 except json.JSONDecodeError:
                     continue
         return logs
+    
+def parse_from_string(self, content: str):
+    temp_path = "temp_win.jsonl"
+    with open(temp_path, "w") as f:
+        f.write(content)
+    return self.parse(temp_path)
+
