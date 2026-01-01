@@ -6,7 +6,6 @@ def test_mitre_mapping_bruteforce():
     detection = {
         "category": "Brute Force",
         "severity": "medium"
-
     }
 
     result = mapper.map_to_mitre(detection)
