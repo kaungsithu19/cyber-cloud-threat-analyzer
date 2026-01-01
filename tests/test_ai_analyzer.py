@@ -4,12 +4,17 @@ def test_ai_analyzer_detects_bruteforce():
     analyzer = AIAnalyzer()
 
     logs = [
-        {"message": "Failed password for admin from 1.2.3.4"},
-        {"message": "Failed password for admin from 1.2.3.4"},
-        {"message": "Failed password for admin from 1.2.3.4"},
+        {"process": "sshd", "message": "Failed password for admin from 1.2.3.4"},
+        {"process": "sshd", "message": "Failed password for admin from 1.2.3.4"},
+        {"process": "sshd", "message": "Failed password for admin from 1.2.3.4"},
     ]
 
     results = analyzer.analyze(logs)
 
-    assert results[-1]["severity"] == "medium"
-    assert results[-1]["category"] == "Brute Force"
+    assert len(results) == 1
+    result = results[0]
+
+    assert result["category"] == "Brute Force"
+    assert result["severity"] == "medium"
+    assert result["ip"] == "1.2.3.4"
+    assert result["user"] == "admin"
