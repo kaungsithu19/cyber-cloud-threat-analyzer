@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from src.dashboard import router as dashboard_router
 
 from src.ai_analyzer import AIAnalyzer
 from src.mitre_mapper import MitreMapper
@@ -6,6 +7,8 @@ from src.mitre_mapper import MitreMapper
 from src.parser.linux_parser import LinuxAuthParser
 from src.parser.windows_parser import WindowsEventParser
 from src.parser.cloudtrail_parser import CloudTrailParser
+
+from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI(
@@ -62,3 +65,12 @@ async def analyze_cloudtrail_log(file: UploadFile = File(...)):
     mapped = [mapper.map_to_mitre(f) for f in findings]
 
     return {"results": mapped}
+
+app.mount(
+    "/static",
+    StaticFiles(directory="src/static"),
+    name="static"
+)
+
+app.include_router(dashboard_router)
+

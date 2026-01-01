@@ -18,7 +18,6 @@ class CloudTrailParser(BaseParser):
 
         return data.get("Records", [])
     
-def parse_from_string_json(self, content: str):
-    import json
-    data = json.loads(content)
-    return data.get("Records", [])
+    def parse_from_string_json(self, content: str):
+        data = json.loads(content)
+        return data.get("Records", [])

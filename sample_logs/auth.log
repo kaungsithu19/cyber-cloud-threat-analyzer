@@ -1,3 +1,20 @@
-Dec 12 14:23:11 server1 sshd[1234]: Failed password for admin from 192.168.1.10
-Dec 12 14:23:13 server1 sshd[1235]: Failed password for admin from 192.168.1.10
-Dec 12 14:23:15 server1 sshd[1236]: Failed password for admin from 192.168.1.10
+Jan 10 07:32:14 ubuntu sshd[1248]: Failed password for admin from 192.168.1.50 port 54422 ssh2
+Jan 10 07:32:17 ubuntu sshd[1248]: Failed password for admin from 192.168.1.50 port 54423 ssh2
+Jan 10 07:32:22 ubuntu sshd[1248]: Failed password for admin from 192.168.1.50 port 54425 ssh2
+Jan 10 07:32:26 ubuntu sshd[1248]: Failed password for admin from 192.168.1.50 port 54427 ssh2
+
+Jan 10 08:15:09 ubuntu sshd[1300]: Accepted password for admin from 203.0.113.77 port 50211 ssh2
+Jan 10 08:15:43 ubuntu sshd[1300]: Accepted password for admin from 203.0.113.77 port 50218 ssh2
+
+Jan 10 09:22:56 ubuntu sudo: john : TTY=pts/0 ; PWD=/home/john ; USER=root ; COMMAND=/usr/bin/apt update
+Jan 10 09:23:02 ubuntu sudo: john : TTY=pts/0 ; PWD=/home/john ; USER=root ; COMMAND=/usr/bin/nano /etc/passwd
+
+Jan 10 10:05:11 ubuntu CRON[2045]: pam_unix(cron:session): session opened for user root by (uid=0)
+Jan 10 10:05:11 ubuntu CRON[2045]: (root) CMD (/usr/bin/python3 /tmp/scan.py)
+Jan 10 10:05:13 ubuntu CRON[2045]: pam_unix(cron:session): session closed for user root
+
+Jan 10 11:20:34 ubuntu sshd[1502]: Authentication succeeded (publickey) for user steve from 10.0.0.22 port 51102 ssh2
+Jan 10 11:20:40 ubuntu sshd[1502]: Session opened for user steve by (uid=0)
+
+Jan 10 11:55:17 ubuntu kernel: [674422.123456] audit: USER_CMD pid=2123 uid=0 auid=0 cmd=scp /etc/shadow
+Jan 10 11:55:18 ubuntu kernel: [674422.123458] audit: USER_CMD pid=2124 uid=0 auid=0 cmd=cat /etc/shadow

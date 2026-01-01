@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cyber Threat Dashboard</title>
+
+    <!-- Static CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<h1>Cyber Cloud Threat Dashboard</h1>
+
+<form action="/dashboard/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" required>
+    <button type="submit">Analyze Logs</button>
+</form>
+
+<hr>
+
+{% if results %}
+
+<!-- ================= KPI CARDS ================= -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-title">Total Alerts</div>
+        <div class="kpi-value">{{ kpi_total }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">High</div>
+        <div class="kpi-value">{{ kpi_high }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Medium</div>
+        <div class="kpi-value">{{ kpi_medium }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Low</div>
+        <div class="kpi-value">{{ kpi_low }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Info</div>
+        <div class="kpi-value">{{ kpi_info }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Unique IPs</div>
+        <div class="kpi-value">{{ kpi_unique_ips }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-title">Unique Users</div>
+        <div class="kpi-value">{{ kpi_unique_users }}</div>
+    </div>
+</div>
+
+<!-- ================= CHARTS ================= -->
+
+<h2>Severity Breakdown</h2>
+<div class="chart-wrap">
+    <canvas id="severityChart"></canvas>
+</div>
+
+<h2>MITRE Techniques Detected</h2>
+<div class="chart-wrap">
+    <canvas id="mitreChart"></canvas>
+</div>
+
+<h2>Alerts Over Time</h2>
+<div class="chart-wrap">
+    <canvas id="timeChart"></canvas>
+</div>
+
+<!-- ================= TOP IP TABLE ================= -->
+
+<h2>Top Source IPs</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>IP</th>
+            <th>Alerts</th>
+            <th>Top Category</th>
+            <th>Max Severity</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in top_ips %}
+        <tr>
+            <td>{{ row.ip }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.top_category }}</td>
+            <td>
+                <span class="sev sev-{{ row.max_severity }}">
+                    {{ row.max_severity }}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- ================= ATTACK LIST TABLE ================= -->
+
+<h2>Detection Results</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Category</th>
+            <th>Severity</th>
+            <th>User</th>
+            <th>IP</th>
+            <th>MITRE</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+        <tr>
+            <td>
+                {{ r.log.timestamp if r.log and r.log.timestamp
+                   else r.timestamp if r.timestamp
+                   else "" }}
+            </td>
+            <td>{{ r.category }}</td>
+            <td>
+                <span class="sev sev-{{ r.severity }}">
+                    {{ r.severity }}
+                </span>
+            </td>
+            <td>{{ r.user if r.user else "-" }}</td>
+            <td>{{ r.ip if r.ip else "-" }}</td>
+            <td>{{ r.mitre_id }}: {{ r.mitre_name }}</td>
+            <td>{{ r.description }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- ================= CHART JS ================= -->
+
+{% if severity_labels and severity_values %}
+<script>
+new Chart(document.getElementById('severityChart'), {
+    type: 'pie',
+    data: {
+        labels: {{ severity_labels | safe }},
+        datasets: [{
+            data: {{ severity_values | safe }}
+        }]
+    }
+});
+</script>
+{% endif %}
+
+{% if mitre_labels and mitre_values %}
+<script>
+new Chart(document.getElementById('mitreChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ mitre_labels | safe }},
+        datasets: [{
+            label: 'MITRE Technique Counts',
+            data: {{ mitre_values | safe }}
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+</script>
+{% endif %}
+
+{% if time_labels and time_values %}
+<script>
+new Chart(document.getElementById('timeChart'), {
+    type: 'line',
+    data: {
+        labels: {{ time_labels | safe }},
+        datasets: [{
+            label: 'Alerts per Hour',
+            data: {{ time_values | safe }},
+            tension: 0.2
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+</script>
+{% endif %}
+
+{% endif %}
+
+</body>
+</html>

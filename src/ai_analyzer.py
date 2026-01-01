@@ -15,87 +15,148 @@ class AIAnalyzer:
         self.ip_seen_before = set()
 
     def analyze(self, logs: List[Dict]) -> List[Dict]:
-        results = []
+        aggregated = {}
+
         for entry in logs:
-            result = {
-                "log": entry,
-                "severity" : "info",
-                "description" : "Placeholder analysis"
-            }
-        
-            if "message" in entry:
-                linux_result = self._analyze_linux(entry)
-                if linux_result:
-                    results.append(linux_result)
-                    continue
+            result = None
 
-            if "EventID" in entry:
-                windows_result = self.__analyze_windows(entry)
-                if windows_result:
-                    results.append(windows_result)
-                    continue
+            # Windows (must be first, explicit)
+            if entry.get("source") == "windows":
+                result = self._analyze_windows(entry)
 
-            if "eventName" in entry:
-                cloud_result = self._analyze_cloudtrail(entry)
-                if cloud_result:
-                    results.append(cloud_result)
-                    continue
-            results.append(result)
-        return results
-    # ----------------------------
-    # Linux Log Analysis
-    # ----------------------------   \
-    # 
-    def _analyze_linux(self, log:Dict) -> Dict:
+            # Linux
+            elif entry.get("process"):
+                result = self._analyze_linux(entry)
+
+            # CloudTrail
+            elif "eventName" in entry:
+                result = self._analyze_cloudtrail(entry)
+
+            if not result:
+                continue
+
+            agg_key = (
+                result.get("category", "Unknown"),
+                result.get("user", "None"),
+                result.get("ip", "None")
+            )
+
+            existing = aggregated.get(agg_key)
+            if existing:
+                sev_order = {"info": 1, "low": 2, "medium": 3, "high": 4}
+                if sev_order[result["severity"]] > sev_order[existing["severity"]]:
+                    aggregated[agg_key] = result
+            else:
+                aggregated[agg_key] = result
+
+        return list(aggregated.values())
+
+    def _analyze_linux(self, log: Dict) -> Dict:
         msg = log["message"]
 
-        #Failed SSH login
+        # ----------------------------
+        # SSH FAILED LOGIN (Brute Force)
+        # ----------------------------
         if "Failed password" in msg:
             ip = self._extract_ip(msg)
             user = self._extract_username(msg)
-            key = f"{user}:{ip}"    
-            self.failed_attempts[key] += 1
+            key = f"{user}:{ip}"
 
+            self.failed_attempts[key] += 1
             count = self.failed_attempts[key]
+
             if count > 5:
                 severity = "high"
-            elif count >=3:
-                severity = "medium" 
+            elif count >= 3:
+                severity = "medium"
             else:
-                severity ="low"
+                severity = "low"
 
             return {
-                "log" : log,
+                "log": log,
                 "severity": severity,
-                "description" : f"Multiple failed login attempts ({count})",
-                "category" : "Brute Force",
-                "ip" : ip,
-                "user" : user
+                "description": f"Multiple failed SSH login attempts ({count})",
+                "category": "Brute Force",
+                "ip": ip,
+                "user": user
             }
-        
-        # Successful login from a new IP
+
+        # --------------------------------
+        # SSH SUCCESSFUL PASSWORD LOGIN
+        # --------------------------------
         if "Accepted password" in msg:
             ip = self._extract_ip(msg)
+            user = self._extract_username(msg)
 
             severity = "high" if ip not in self.ip_seen_before else "info"
             self.ip_seen_before.add(ip)
 
             return {
                 "log": log,
-                "severrity": severity,
-                "description" : "Successful login from new Ip address",
-                "category" : "Suspicious login",
-                "ip" : ip
+                "severity": severity,
+                "description": f"Successful SSH login from new IP address {ip}",
+                "category": "Suspicious Login",
+                "ip": ip,
+                "user": user
             }
 
-        if "sudo" in msg and "COMMAND=" in msg:
+        # --------------------------------
+        # SSH SUCCESSFUL PUBLIC KEY LOGIN
+        # --------------------------------
+        if "Authentication succeeded (publickey)" in msg:
+            ip = self._extract_ip(msg)
+            user = self._extract_username(msg)
+
             return {
-                "log" : log,
-                "severity" : "medium",
-                "description" : "Privilege escalation attempt (sudo usage)",
-                "category" : "Privilege Escation",
+                "log": log,
+                "severity": "info",
+                "description": "SSH login using public key authentication",
+                "category": "Lateral Movement",
+                "ip": ip,
+                "user": user
             }
+
+        # ----------------------------
+        # SUDO PRIVILEGE ESCALATION
+        # ----------------------------
+        if log.get("process") == "sudo" and "COMMAND=" in msg:
+            user = self._extract_sudo_user(msg)
+
+            return {
+                "log": log,
+                "severity": "medium",
+                "description": "Privilege escalation via sudo command execution",
+                "category": "Privilege Escalation",
+                "user": user
+            }
+        
+        # ----------------------------
+        # CRON PERSISTENCE DETECTION
+        # ----------------------------
+        if "CRON" in msg and "CMD=" in msg:
+            severity = "high" if "/tmp/" in msg else "medium"
+
+            return {
+                "log": log,
+                "severity": severity,
+                "description": "Scheduled task executed via cron",
+                "category": "Persistence"
+            }
+
+        # ----------------------------
+        # CREDENTIAL ACCESS (/etc/shadow)
+        # ----------------------------
+        if "/etc/shadow" in msg:
+            return {
+                "log": log,
+                "severity": "high",
+                "description": "Access to sensitive credential file /etc/shadow",
+                "category": "Credential Access"
+            }
+
         return None
+
+
     
     #Helpers
 
@@ -107,69 +168,161 @@ class AIAnalyzer:
         m = re.search(r"for (\w+)", msg)
         return m.group(1) if m else "unknown"
     
+    def _extract_sudo_user(self, msg: str) -> str:
+        m = re.search(r"^\s*(\w+)\s*:", msg)
+        return m.group(1) if m else "unknown"
+
+
+    
     # ----------------------------
     # Windows Event Analysis
     # ----------------------------
 
     def _analyze_windows(self, log: Dict) -> Dict:
-        event_id = log.get("EventID")
+        event_id = log.get("event_id")   # ✅ normalized field
+        user = log.get("user", "unknown")
+        ip = log.get("ip", "unknown")
+        process = log.get("process", "")
+        msg = log.get("message", "")
 
-        #Failed Login
+        # ----------------------------
+        # FAILED LOGIN (4625)
+        # ----------------------------
         if event_id == 4625:
             return {
-                "log" : log,
-                "severity" : "info",
-                "description": "Successful Windows Login (Event 4624)"
-
+                "log": log,
+                "severity": "medium",
+                "description": "Failed Windows login attempt",
+                "category": "Brute Force",
+                "user": user,
+                "ip": ip
             }
-        
-        #Process created
-        if event_id == 4688:
-            process =log.get("NewProcessName", "")
 
-            severity = "high" if "powershell" in process.lower() else "low"
+        # ----------------------------
+        # SUCCESSFUL LOGIN (4624)
+        # ----------------------------
+        if event_id == 4624:
+            return {
+                "log": log,
+                "severity": "info",
+                "description": "Successful Windows login",
+                "category": "Suspicious Login",
+                "user": user,
+                "ip": ip
+            }
+
+        # ----------------------------
+        # PRIVILEGED LOGON (4672)
+        # ----------------------------
+        if event_id == 4672:
+            return {
+                "log": log,
+                "severity": "high",
+                "description": "Privileged account logged on",
+                "category": "Privilege Escalation",
+                "user": user,
+                "ip": ip
+            }
+
+        # ----------------------------
+        # PROCESS CREATION (4688)
+        # ----------------------------
+        if event_id == 4688:
+            proc_lower = process.lower()
+
+            severity = "low"
+            if "powershell" in proc_lower or "cmd.exe" in proc_lower:
+                severity = "high"
+            elif "temp" in proc_lower:
+                severity = "medium"
 
             return {
-                "log" : log,
-                "severity" : severity,
-                "description" : f"Process created: {process}",
-                "category": "Process Creation"
+                "log": log,
+                "severity": severity,
+                "description": f"Process created: {process}",
+                "category": "Process Creation",
+                "user": user,
+                "ip": ip
             }
+
         return None
+
 
     # ----------------------------
     # CloudTrail Analysis
     # ----------------------------
 
     def _analyze_cloudtrail(self, log: Dict) -> Dict:
-        event = log.get("eventName", "")
+        event_name = log.get("eventName", "")
+        event_time = log.get("eventTime")
+        source_ip = log.get("sourceIPAddress", "unknown")
 
-        #Unauthorized API call
-        if event == "UnauthorizedOperation":
+        # User extraction (safe)
+        user_identity = log.get("userIdentity", {})
+        user = (
+            user_identity.get("userName")
+            or user_identity.get("arn")
+            or user_identity.get("principalId")
+            or "unknown"
+        )
+
+        error_code = log.get("errorCode", "")
+        error_message = log.get("errorMessage", "")
+
+        # ----------------------------
+        # UNAUTHORIZED API CALLS
+        # ----------------------------
+        if "Unauthorized" in error_code or "Unauthorized" in error_message:
             return {
                 "log": log,
-                "severity" : "high",
-                "description" : "Unauthorized API call detected",
-                "category" : "IAM Misuse" 
+                "severity": "high",
+                "description": f"Unauthorized AWS API call: {event_name}",
+                "category": "IAM Misuse",
+                "user": user,
+                "ip": source_ip,
+                "timestamp": event_time
             }
-        
-        # IAM policy changes
 
-        if event in ["PutUserPoicy", "AttcahRolePolicy", "CreatePolicyVersion"]:
+        # ----------------------------
+        # FAILED CONSOLE LOGIN
+        # ----------------------------
+        if event_name == "ConsoleLogin" and error_message:
             return {
-                "log" : log,
-                "severity" : "high",
-                "description" : f"IAM policy modification: {event}",
-                "category": "Privilege Escation"
-
+                "log": log,
+                "severity": "medium",
+                "description": f"Failed AWS console login: {error_message}",
+                "category": "Suspicious Login",
+                "user": user,
+                "ip": source_ip,
+                "timestamp": event_time
             }
-        
-            #Console login failures
-            if event == "consoleLogin" and log.get("errorMessage"):
-                return {
-                    "log": log,
-                    "severity" : "medium",
-                    "description" : f"Failed AWS console login: {log.get('errorMessage')}",
 
-                }
-            return None
+        # ----------------------------
+        # IAM PRIVILEGE ESCALATION
+        # ----------------------------
+        if event_name.startswith(("Put", "Attach", "Create")) and "Policy" in event_name:
+            return {
+                "log": log,
+                "severity": "high",
+                "description": f"IAM policy modification: {event_name}",
+                "category": "Privilege Escalation",
+                "user": user,
+                "ip": source_ip,
+                "timestamp": event_time
+            }
+
+        # ----------------------------
+        # SENSITIVE READ ACTIONS
+        # ----------------------------
+        if event_name.startswith(("Get", "Describe", "List")):
+            return {
+                "log": log,
+                "severity": "low",
+                "description": f"Sensitive AWS API read action: {event_name}",
+                "category": "Reconnaissance",
+                "user": user,
+                "ip": source_ip,
+                "timestamp": event_time
+            }
+
+        return None
