@@ -63,3 +63,33 @@
 .sev-medium { background: #fff1dc; color: #8a4b00; }
 .sev-low { background: #fffbe1; color: #6b5b00; }
 .sev-info { background: #e7f0ff; color: #1d4ed8; }
+
+.ai-panel {
+    border: 1px solid #ddd;
+    padding: 16px;
+    background: #f9f9f9;
+    margin-bottom: 30px;
+}
+
+.priority {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.priority-immediate {
+    background: #ff4d4d;
+    color: white;
+}
+
+.priority-high {
+    background: #ffa500;
+}
+
+.priority-medium {
+    background: #ffeb3b;
+}
+
+.priority-low {
+    background: #8bc34a;
+}

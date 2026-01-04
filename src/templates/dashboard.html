@@ -175,6 +175,39 @@ new Chart(document.getElementById('mitreChart'), {
 </script>
 {% endif %}
 
+<!-- ================= AI RECOMMENDATIONS ================= -->
+
+{% if ai_recommendations %}
+<h2>AI Security Recommendations</h2>
+
+<div class="ai-panel">
+    <p><strong>Risk Summary:</strong></p>
+    <p>{{ ai_recommendations.risk_summary }}</p>
+
+    <p><strong>Immediate Actions:</strong></p>
+    <ul>
+        {% for action in ai_recommendations.immediate_actions %}
+        <li>{{ action }}</li>
+        {% endfor %}
+    </ul>
+
+    <p><strong>Preventive Controls:</strong></p>
+    <ul>
+        {% for control in ai_recommendations.preventive_controls %}
+        <li>{{ control }}</li>
+        {% endfor %}
+    </ul>
+
+    <p>
+        <strong>Priority:</strong>
+        <span class="priority priority-{{ ai_recommendations.priority|lower }}">
+            {{ ai_recommendations.priority }}
+        </span>
+    </p>
+</div>
+{% endif %}
+
+
 {% if time_labels and time_values %}
 <script>
 new Chart(document.getElementById('timeChart'), {

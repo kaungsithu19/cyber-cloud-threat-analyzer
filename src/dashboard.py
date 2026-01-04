@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, UploadFile, File
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from src.llm_recommender import LLMRecommender, build_incident_summary
 
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -60,6 +61,18 @@ async def upload_logs(request: Request, file: UploadFile = File(...)):
 
     mapper = MitreMapper()
     mapped = [mapper.map_to_mitre(f) for f in findings]
+
+    # -------------------------------------------------
+    # AI Recommendations (LLM Advisory Layer)
+    # -------------------------------------------------
+    llm_recommender = LLMRecommender()
+
+    incident_summary = build_incident_summary(mapped)
+
+    ai_recommendations = llm_recommender.generate_recommendations(
+        incident_summary
+    )
+
 
     # -------------------------------------------------
     # KPI calculations
@@ -181,5 +194,8 @@ async def upload_logs(request: Request, file: UploadFile = File(...)):
 
             # Tables
             "top_ips": top_ips,
+
+            # ✅ AI
+            "ai_recommendations": ai_recommendations
         }
     )

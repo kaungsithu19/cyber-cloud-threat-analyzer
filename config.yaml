@@ -1,0 +1,5 @@
+# OpenAI model to use for recommendations
+openai_model: gpt-4.1-mini
+
+# Optional future limits (safe defaults)
+max_incidents_per_request: 1
