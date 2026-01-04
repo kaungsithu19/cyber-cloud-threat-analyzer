@@ -14,11 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirement.txt .
 RUN pip install --no-cache-dir -r requirement.txt
 
-# ✅ COPY CONFIG FILES
+# ✅ COPY NON-SECRET CONFIG
 COPY config.yaml ./
-COPY .env ./
 
-# ✅ COPY APP FILES
+# ✅ COPY APPLICATION CODE
 COPY src/ ./src
 COPY sample_logs/ ./sample_logs/
 COPY tests/ ./tests
