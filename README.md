@@ -1,4 +1,4 @@
-# Cyber Cloud Threat Analyzer (Python + Docker + CI/CD)
+# Cyber Cloud Threat Analyzer (Python + Docker + CI/C)
 
 A modular cybersecurity log analyzer built with Python, designed for cloud deployment using Docker and GitHub Actions CI/CD.
 
