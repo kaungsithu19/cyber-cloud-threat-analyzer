@@ -267,10 +267,3 @@ This project was developed as a **portfolio-grade security analytics system**, d
 
 This project is released for **educational and portfolio purposes**.
 You are free to study, fork, and adapt the code with attribution.
-
-* Tailor this README for **MSc submission**
-* Shorten it for **recruiters**
-* Add **architecture diagrams**
-* Add **badges and CI status**
-
-Just tell me.
